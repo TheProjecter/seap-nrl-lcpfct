@@ -1,0 +1,41 @@
+scratch=scratch
+
+.SUFFIXES: .f .o .f90
+
+ FC = pgf90
+
+ PAR     = -openmp -parallel
+ PAR     = -openmp -parallel -par_report3
+ PAR     = -openmp
+ PAR     =
+ CNV	 = -convert big_endian
+ CNV	=
+ OPT	= -O3
+ DBL	= -r8
+#DBL	=
+
+ FFLAGS	  = -tp k8-64 -O3 -fastsse -Mextend $(DBL)
+ FOPT     = $(PAR) $(TRACE)
+ FNRM     = 
+ OPTFLAGS = $(FOPT) $(FFLAGS)
+ NRMFLAGS = $(FNRM) $(FFLAGS)
+ LDFLAGS  = $(TRACE) $(PAR) $(OPT)
+ LDLIBS   = 
+
+ INC =   Makefile 
+ SRC =   $(wildcard *.f)
+ OBJ =   ${SRC:.f=.o} timer.o
+#OBJ =   ${SRC:.f=.o}
+ EXE =   fast2d
+
+all: $(EXE)
+$(EXE) : $(OBJ) ; $(FC) $(LDFLAGS) -o $(scratch)/$@ $(OBJ) $(LDLIBS)
+
+timer.o : timer.f90
+	$(FC) -c $(OPTFLAGS) $<
+
+lcpfct.o : lcpfct.f
+clean: ; rm ./$(scratch)/fast2d *.o
+
+%.o: %.f   $(INC) ; $(FC) -c $(OPTFLAGS) $<
+%.o: %.f90 $(INC) ; $(FC) -c $(OPTFLAGS) $<

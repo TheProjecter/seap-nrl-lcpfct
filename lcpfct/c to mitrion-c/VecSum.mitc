@@ -1,0 +1,36 @@
+Mitrion-C 1.0;
+//options: -cpp
+
+#define ExtRAM  mem uint:64[0x100000]
+#define MemType mem uint:64[0x100000]
+#define POINTS 10000
+
+(MemType, MemType, MemType, MemType, mem uint:64[0x2000000000])
+	main
+(MemType Am0, MemType Bm0, MemType Cm0, MemType Dm0, mem uint:64[0x2000000000] HostRAM, uint:64 ftr_byteaddr, uint:64 dimensions_in)
+{
+
+	uint:64 ftr_addr = ftr_byteaddr >> 3;  //used to conver cray's physical 1 byte address to a 8 byte address to access 64 bits
+	uint:8  dims     = dimensions_in;      //reading some arbitrary value in
+
+	(AmDone, BmDone, CmDone, DmDone, HmDONE) = foreach( i in <0  .. POINTS> by index  )
+	{
+		(a, Am1) = _memread(Am0, index);
+		(b, Bm1) = _memread(Bm0, index);
+		(c, Cm1) = _memread(Cm0, index);
+
+	d = a + b + c;
+
+	Dm1      = _memwrite(Dm0, index, d);
+	off = ftr_addr + i;
+	HostRAM2 = _memwrite(HostRAM, off, d);
+	}(Am1, Bm1, Cm1, Dm1, HostRAM2);
+
+	AmFinished = _wait(AmDone);
+	BmFinished = _wait(BmDone);
+	CmFinished = _wait(CmDone);
+	DmFinished = _wait(DmDone);
+	Host_finish = _wait(HmDONE);
+
+} (AmFinished, BmFinished, CmFinished, DmFinished, Host_finish);
+

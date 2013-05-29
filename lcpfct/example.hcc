@@ -1,0 +1,24 @@
+#include <cray_xd1.hch>
+
+unsigned int[10] 8 array1;
+unsigned int[10] 8 array2;
+unsigned int[10] 8 array3;
+
+void main()
+{
+	unsigned int 8 i;
+	i = 0;
+	do
+	{
+		par
+		{
+			array1[i] = i + 1;
+			array2[i] = 10 * (i + 1);
+		}
+		par
+		{
+			array3[i] = array1[i] + array2[i];
+			i++;
+		}
+	} while (i < array1.length && i < array2.length);
+}

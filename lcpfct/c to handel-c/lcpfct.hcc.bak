@@ -1,0 +1,320 @@
+/*
+ * converted from lcpfct.c
+ * (which was in turn converted almost verbatium from lcpfct.f)
+ * 	integer -> int
+ * 	float -> ints
+ * 	boolean -> int
+ * 	var[size] -> var[size]
+ * 	#define -> #define
+ * 	struct -> struct
+ *
+ * from here on out, I will religiously copy all comments in code
+ * for better comparability between original code and my translated
+ * version ... comments in original code use //
+ *
+ * 					-- mabel xu, july 17 2007
+ */
+
+/* #include <stdio.h>		/* for printing debugging messages */
+/* #include <stdbool.h>	/* support on UNIX for bool vars */
+/* #include <math.h>		/* support for fabs() */
+
+#include <cray_xd1.hch>	/* library for cray stuff */
+
+//--------------------------------------------------------------------
+//
+//     Originated: J.P. Boris         Code 4400, NRL          Feb 1987
+//     Modified:  Laboratory for Computational Physics & Fluid Dynamics
+//     Contact:    J.P. Boris, J.H. Gardner, A.M. Landsberg, or E.S. Oran
+//
+//     Description:  This routine solves generalized continuity equations
+//     of the form  dRHO/dt = -div (RHO*V) + SOURCES in the user's choice
+//     of Cartesian, cylindrical, or spherical coordinate systems.  A
+//     facility is included to allow definition of other coordinates.
+//     The grid can be Eulerian, sliding rezone, or Lagrangian and can
+//     be arbitrarily spaced.  The algorithm is a low-phase-error FCT
+//     algorithm, vectorized and optimized for a combination of speed and
+//     flexibility.  A complete description appears in the NRL Memorandum
+//     Report (1992), "LCPFCT - A Flux-Corrected Transport Algorithm For
+//     Solving Generalized Continuity Equations".
+//
+//     Arguments:
+//     RHOO   Real Array        grid point densities at start of step   I
+//     RHON   Real Array        grid point densities at end of step     O
+//     I1     Integer           first grid point of integration         I
+//     IN     Integer           last grid point of intergration         I
+//     SRHO1  Real Array        boundary guard cell factor at cell I1+1 I
+//     VRHO1  Real Array        boundary value added to guard cell I1-1 I
+//     SRHON  Real Array        boundary guard cell factor at cell IN+1 I
+//     VRHON  Real Array        boundary value added to guard cell IN+1 I
+//     PBC    Logical           periodic boundaries if PBC = .true.     I
+//
+//       In this routine the last interface at RADHN(INP) is the outer
+//     boundary of the last cell indexed IN.  The first interface at
+//     RADHN(I1) is the outer boundary of the integration domain before
+//     the first cell indexed I1.
+//
+//     Language and Limitations:  LCPFCT is a package of FORTRAN 77 sub-
+//     routines written in single precision (64 bits CRAY). The parameter
+//     NPT is used to establish the internal FCT array dimensions at the
+//     maximum size expected.  Thus NPT = 2002 means that continuity equa-
+//     tions for systems up to 200 cells long in one direction can be
+//     integrated.  Underflows can occur when the function being trans-
+//     ported has a region of zeroes.  The calculations misconserve by
+//     one or two bits per cycle.  Relative phase and amplitude errors
+//     (for smooth functions) are typically a few percent for character-
+//     istic lengths of 1 - 2 cells (wavelengths of order 10 cells).  The
+//     jump conditions for shocks are generally accurate to better than 1
+//     percent.  Common blocks are used to transmit all data between the
+//     subroutines in the LCPFCT package.
+//
+//     Auxiliary Subroutines:  CNVFCT, CONSERVE, COPYGRID, MAKEGRID,
+//     NEW_GRID, RESIDIFF, SET_GRID, SOURCES, VELOCITY, ZERODIFF, and
+//     ZEROFLUX.  The detailed documentation report provided (or the
+//     listing below) explains the definitions and use of the arguments
+//     to these other subroutines making up the LCPFCT package.  These
+//     routines are not called from LCPFCT itself but are controlled by
+//     calls from the user.  Subroutines MAKEGRID, VELOCITY and SOURCES
+//     in this package must first be called to set the grid geometry,
+//     velocity-dependent flux and diffusion coefficients, and external
+//     source arrays used by LCPFCT.  The other subroutines may be called
+//     to perform other functions such as to modify boundary conditions,
+//     to perform special grid operations, or compute conservation sums.
+//
+//--------------------------------------------------------------------
+
+/* for compatability between c and fortran: */
+/* c arrays start at 0, fortran arrays start at 1 */
+#define I1 i1 - 1
+#define IN in - 1
+
+/* set default int width to 64 */
+set intwidth = 11;
+
+/* here be extra functions that mimic intrinsic functions in fortran 77 */
+int fct_amax1 (int a, int b)	/* this particular "amax1" only supports 2 variables! woot! */
+{
+	return (a >= b) ? a : b;
+}
+int fct_amin1 (int a, int b, int c)		/* this particular "amin1" only supports 3 variables! woot! */
+{
+	if (a <= b && a <= c)
+		return a;
+	else if (b <= a && b <= c)
+		return b;
+	else
+		return c;
+}
+int fct_sign (int a, int b)		/* does whatever sign does ... I don't pretend to understand this at all */
+{
+	return (b >= 0) ? abs(a) : -abs(a);
+}
+int fct_abs (int a)		/* eliminates need to include libraries */
+{
+	return (a >= 0) ? a : -a;
+}
+
+#define NPT 2002
+#define BIGNUM 1e38f
+//	BIGNUM = Machine Dependent Largest Number - Set By The User!!!!
+
+/* "converted" structs of ints */
+//	/FCT_SCRH/ Holds scratch arrays for use by LCPFCT and CNVFCT
+struct
+{
+	int scrh[NPT];
+	int scr1[NPT];
+	int diff[NPT];
+	int flxh[NPT];
+	int fabs[NPT];
+	int fsgn[NPT];
+	int term[NPT];
+	int terp[NPT];
+	int lnrhot[NPT];
+	int lorhot[NPT];
+	int rhot[NPT];
+	int rhotd[NPT];
+} scrh;
+//	$OMP THREADPRIVATE(/FCT_SCRH/)
+
+//	/FCT_GRID/ Holds geometry, grid, area and volume information
+struct
+{
+	int lo[NPT];
+	int ln[NPT];
+	int ah[NPT];
+	int rln[NPT];
+	int lh[NPT];
+	int rlh[NPT];
+	int roh[NPT];
+	int rnh[NPT];
+	int adugth[NPT];
+} grid;
+//	$OMP THREADPRIVATE(/FCT_GRID/)
+
+//	/FCT_VELO/ Holds velocity-dependent flux coefficients
+struct
+{
+	int hadudth[NPT];
+	int nulh[NPT];
+	int mulh[NPT];
+	int epsh[NPT];
+	int vdtodr[NPT];
+} velo;
+//	$OMP THREADPRIVATE( /FCT_VELO/)
+
+//	/FCT_MISC/ Holds the source array and diffusion coefficient
+struct
+{
+	int source[NPT];
+	int diff1_;
+} misc;
+//	$OMP THREADPRIVATE( /FCT_MISC/)
+
+/* function takes "converted" arguments */
+void lcpfct_ (int *rhoo, int *rhon, unsigned int* i1, unsigned int* in,
+				int* srho1, int* vrho1, int* srhon,
+				int* vrhon, int* pbc)
+{	
+	/* passed vars and constants went here originally */
+
+	static unsigned int i1p, inp, i;
+	static int rho1m, rhonp, rhot1m, rhotnp, rhotd1m, rhotdnp;
+
+	/* COMMONs originally went here (now structs) */
+
+//-----------------------------------------------------------------------
+	par	{
+	i1p = *I1 + 1;
+	inp = *IN + 1;	}
+
+//	Calculate the convective and diffusive fluxes . . .
+//-----------------------------------------------------------------------
+	if ( *pbc )
+	{
+		par	{
+		rho1m = rhoo[*IN];
+		rhonp = rhoo[*I1];	}
+	}
+	else
+	{
+		par	{
+		rho1m = *srho1 * rhoo[*I1] + *vrho1;
+		rhonp = *srhon * rhoo[*IN] + *vrhon;	}
+	}
+
+	par	{
+	scrh.diff[*I1] = velo.nulh[*I1] * ( rhoo[*I1] - rho1m );
+	scrh.flxh[*I1] = velo.hadudth[*I1] * ( rhoo[*I1] + rho1m );
+	i = i1p;	}
+
+	while(i <= *IN)
+	{
+		par	{
+		scrh.flxh[i] = velo.hadudth[i] * ( rhoo[i] + rhoo[i-1] );
+		scrh.diff[i] = velo.nulh[i] * ( rhoo[i] - rhoo[i-1] );
+		i++;	}
+	}
+
+	par	{
+	scrh.diff[inp] = velo.nulh[inp] * ( rhonp - rhoo[*IN] );
+	scrh.flxh[inp] = velo.hadudth[inp] * ( rhonp + rhoo[*IN] );
+	i = *I1;	}
+
+//	Calculate LORHOT, the transported mass elements, and LNRHOT, the
+//	transported & diffused mass elements . . .
+//-----------------------------------------------------------------------
+	while(i <= *IN)
+	{
+		par	{
+		scrh.lorhot[i] = grid.lo[i] * rhoo[i] + misc.source[i] + (scrh.flxh[i] - scrh.flxh[i+1]);
+		scrh.lnrhot[i] = scrh.lorhot[i] + (scrh.diff[i+1] - scrh.diff[i]);
+		scrh.rhot[i] = scrh.lorhot[i] * grid.rln[i];
+		scrh.rhotd[i] = scrh.lnrhot[i] * grid.rln[i];
+		i++;	}
+	}
+
+//	Evaluate the boundary conditions for RHOT and RHOTD . . .
+//-----------------------------------------------------------------------
+	if ( *pbc )
+	{
+		par	{
+		rhot1m = scrh.rhot[*IN];
+		rhotnp = scrh.rhot[*I1];
+		rhotd1m = scrh.rhotd[*IN];
+		rhotdnp = scrh.rhotd[*I1];	}
+	}
+	else
+	{
+		par	{
+		rhot1m = *srho1 * scrh.rhot[*I1] + *vrho1;
+		rhotnp = *srhon * scrh.rhot[*IN] + *vrhon;
+		rhotd1m = *srho1 * scrh.rhotd[*I1] + *vrho1;
+		rhotdnp = *srhon * scrh.rhotd[*IN] + *vrhon;	}
+	}
+
+//	Calculate the transported antiduffusive fluxes and transported
+//	and diffused density differences . . .
+//-----------------------------------------------------------------------
+	par	{
+	scrh.flxh[*I1] = velo.mulh[*I1] * ( scrh.rhot[*I1] - rhot1m );
+	scrh.diff[*I1] = scrh.rhotd[*I1] - rhotd1m;
+	scrh.fabs[*I1] = abs ( scrh.flxh[*I1] );
+	scrh.fsgn[*I1] = sign ( misc.diff1_, scrh.diff[*I1] );
+	i = i1p;	}
+
+	while(i <= *IN)
+	{
+		par	{
+		scrh.flxh[i] = velo.mulh[i] * ( scrh.rhot[i] - scrh.rhot[i-1] );
+		scrh.diff[i] = scrh.rhotd[i] - scrh.rhotd[i-1];
+		i++;	}
+	}
+
+	par	{
+	scrh.flxh[inp] = velo.mulh[inp] * ( rhotnp - scrh.rhot[*IN] );
+	scrh.diff[inp] = rhotdnp - scrh.rhotd[*IN];
+	i = *I1;	}
+
+//	Calculate the magnitude & sign of the antidiffusive flux followed
+//	by the flux-limiting changes on the right and left . . .
+//-----------------------------------------------------------------------
+	while(i <= *IN)
+	{
+		par	{
+		scrh.fabs[i+1] = abs ( scrh.flxh[i+1] );
+		scrh.fsgn[i+1] = sign ( misc.diff1_, scrh.diff[i+1] );
+		scrh.term[i+1] = scrh.fsgn[i+1] * grid.ln[i] * scrh.diff[i];
+		scrh.terp[i] = scrh.fsgn[i] * grid.ln[i] * scrh.diff[i+1];
+		i++;	}
+	}
+
+	if ( *pbc )
+	{
+		par	{
+		scrh.terp[inp] = scrh.terp[*I1];
+		scrh.term[*I1] = scrh.term[inp];	}
+	}
+	else
+	{
+		par	{
+		scrh.terp[inp] = BIGNUM;
+		scrh.term[*I1] = BIGNUM;	}
+	}
+
+//	Correct the transported fluxes completely and then calculate the
+//	new Flux-Corrected Transport densities . . .
+//-----------------------------------------------------------------------
+	par	{
+	scrh.flxh[*I1] = scrh.fsgn[*I1] * fct_amax1 ( 0.0, fct_amin1 ( scrh.term[*I1], scrh.fabs[*I1], scrh.terp[*I1] ) );
+	i = *I1;	}
+
+	while(i <= *IN)
+	{
+		par	{
+		scrh.flxh[i+1] = scrh.fsgn[i+1] * fct_amax1 ( 0.0, fct_amin1 ( scrh.term[i+1], scrh.fabs[i+1], scrh.terp[i+1] ) );
+		rhon[i] = grid.rln[i] * ( scrh.lnrhot[i] + (scrh.flxh[i] - scrh.flxh[i+1]) );
+		misc.source[i] = 0.0;
+		i++;	}
+	}
+}

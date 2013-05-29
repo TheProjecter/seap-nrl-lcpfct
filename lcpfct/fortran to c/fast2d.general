@@ -1,0 +1,10 @@
+ file = C:\fct_test\fast2d.mxu.dat
+ grid =  1025 x 1025
+ format = lsb ieee
+ interleaving = record
+ field = rho, velocity, erg
+ structure = scalar, 2-vector, scalar
+ type = float, float, float
+ dependency = positions, positions, positions
+ positions = regular, regular, 0, 1, 0, 1
+ end

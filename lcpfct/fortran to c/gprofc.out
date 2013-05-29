@@ -1,0 +1,205 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls   s/call   s/call  name    
+ 48.29    392.54   392.54   459264     0.00     0.00  lcpfct_
+ 12.92    497.60   105.06   114816     0.00     0.00  velocity_
+  8.71    568.37    70.77    57408     0.00     0.01  gasdyn_
+  7.13    626.30    57.93        1    57.93   813.17  MAIN__
+  6.56    679.61    53.31 432786848     0.00     0.00  sign
+  5.39    723.42    43.81 432786848     0.00     0.00  amin1
+  4.65    761.24    37.82 865573696     0.00     0.00  float_abs
+  3.86    792.61    31.37   229632     0.00     0.00  sources_
+  2.52    813.08    20.47 432786848     0.00     0.00  amax1
+  0.00    813.12     0.04       52     0.00     0.00  makegrid_
+  0.00    813.15     0.03   123032     0.00     0.00  zeroflux_
+  0.00    813.17     0.02       26     0.00     0.00  fctblk_init__
+  0.00    813.17     0.00   106600     0.00     0.00  zerodiff_
+  0.00    813.17     0.00       26     0.00     0.00  residiff_
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+ 
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this 
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 0.00% of 813.17 seconds
+
+index % time    self  children    called     name
+               57.93  755.24       1/1           main [2]
+[1]    100.0   57.93  755.24       1         MAIN__ [1]
+               70.77  684.41   57408/57408       gasdyn_ [3]
+                0.04    0.00      52/52          makegrid_ [11]
+                0.02    0.00      26/26          fctblk_init__ [13]
+                0.00    0.00      26/26          residiff_ [15]
+-----------------------------------------------
+                                                 <spontaneous>
+[2]    100.0    0.00  813.17                 main [2]
+               57.93  755.24       1/1           MAIN__ [1]
+-----------------------------------------------
+               70.77  684.41   57408/57408       MAIN__ [1]
+[3]     92.9   70.77  684.41   57408         gasdyn_ [3]
+              392.54  155.41  459264/459264      lcpfct_ [4]
+              105.06    0.00  114816/114816      velocity_ [5]
+               31.37    0.00  229632/229632      sources_ [9]
+                0.03    0.00  123032/123032      zeroflux_ [12]
+                0.00    0.00  106600/106600      zerodiff_ [14]
+-----------------------------------------------
+              392.54  155.41  459264/459264      gasdyn_ [3]
+[4]     67.4  392.54  155.41  459264         lcpfct_ [4]
+               53.31   18.91 432786848/432786848     sign [6]
+               43.81    0.00 432786848/432786848     amin1 [7]
+               20.47    0.00 432786848/432786848     amax1 [10]
+               18.91    0.00 432786848/865573696     float_abs [8]
+-----------------------------------------------
+              105.06    0.00  114816/114816      gasdyn_ [3]
+[5]     12.9  105.06    0.00  114816         velocity_ [5]
+-----------------------------------------------
+               53.31   18.91 432786848/432786848     lcpfct_ [4]
+[6]      8.9   53.31   18.91 432786848         sign [6]
+               18.91    0.00 432786848/865573696     float_abs [8]
+-----------------------------------------------
+               43.81    0.00 432786848/432786848     lcpfct_ [4]
+[7]      5.4   43.81    0.00 432786848         amin1 [7]
+-----------------------------------------------
+               18.91    0.00 432786848/865573696     sign [6]
+               18.91    0.00 432786848/865573696     lcpfct_ [4]
+[8]      4.7   37.82    0.00 865573696         float_abs [8]
+-----------------------------------------------
+               31.37    0.00  229632/229632      gasdyn_ [3]
+[9]      3.9   31.37    0.00  229632         sources_ [9]
+-----------------------------------------------
+               20.47    0.00 432786848/432786848     lcpfct_ [4]
+[10]     2.5   20.47    0.00 432786848         amax1 [10]
+-----------------------------------------------
+                0.04    0.00      52/52          MAIN__ [1]
+[11]     0.0    0.04    0.00      52         makegrid_ [11]
+-----------------------------------------------
+                0.03    0.00  123032/123032      gasdyn_ [3]
+[12]     0.0    0.03    0.00  123032         zeroflux_ [12]
+-----------------------------------------------
+                0.02    0.00      26/26          MAIN__ [1]
+[13]     0.0    0.02    0.00      26         fctblk_init__ [13]
+-----------------------------------------------
+                0.00    0.00  106600/106600      gasdyn_ [3]
+[14]     0.0    0.00    0.00  106600         zerodiff_ [14]
+-----------------------------------------------
+                0.00    0.00      26/26          MAIN__ [1]
+[15]     0.0    0.00    0.00      26         residiff_ [15]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+
+Index by function name
+
+   [1] MAIN__                  [3] gasdyn_                 [9] sources_
+  [10] amax1                   [4] lcpfct_                 [5] velocity_
+   [7] amin1                  [11] makegrid_              [14] zerodiff_
+  [13] fctblk_init__          [15] residiff_              [12] zeroflux_
+   [8] float_abs               [6] sign
